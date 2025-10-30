@@ -1,2 +1,4 @@
 # this is python code, that was used for reference, but I didn't write it so I don't want to publish it on my github.
 cr3bp_initial_exploration.ipynb
+.vscode
+visualization/data/*

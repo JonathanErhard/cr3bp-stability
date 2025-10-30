@@ -13,12 +13,12 @@ protected:
     // maybe dont save this and just pass 
     double m_time;
     Eigen::Matrix<double, T, 1> m_state;
-    std::function<Eigen::Matrix<double, T, 1>(double t,Eigen::Matrix<double, T, 1>)> m_function;
+    std::function<Eigen::Matrix<double, T, 1>(double,Eigen::Matrix<double, T, 1>)> m_function;
 
 public:
-    integrator(std::function<Eigen::Matrix<double, T, 1>(double t,Eigen::Matrix<double, T, 1>)> function): m_function(function){}
+    integrator(std::function<Eigen::Matrix<double, T, 1>(double,Eigen::Matrix<double, T, 1>)> function): m_function(function){}
 
-    void set_state(const Eigen::VectorXd& state){
+    void set_state(const Eigen::Matrix<double,T,1>& state){
         m_state = state;
     }
 

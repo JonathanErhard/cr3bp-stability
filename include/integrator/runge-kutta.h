@@ -7,7 +7,7 @@
  * @tparam K dimension of the RK weight matrix (triangular for explicit, any for implicit)
  */
 
-template <size_t T,size_t K>
+template <size_t T, size_t K>
 class RungeKutta : public integrator<T>{
 protected:
     const Eigen::Matrix<double, K, K> m_A;
@@ -22,8 +22,7 @@ public:
         m_B(b),
         integrator<T>(function)
         {
-            // sensability check
-
+            // set c weights
             for(int i = 0;i<K;i++){
                 m_C(i) = 0;
                 for(int j = 0;j<K;j++){

@@ -18,8 +18,8 @@ public:
         const Eigen::Matrix<double, K, 1> b):
         RungeKutta<T,K>(function,a,b)
         {
-            for(int i = 0; i<T;i++){
-                for(int j = i; j<T;j++){
+            for(int i = 0; i<K;i++){
+                for(int j = i; j<K;j++){
                     if(a(i,j)!=0.0){    
                         std::cout << "\"a\" must be a lower triangular matrix with diagonal equal to 0!\n";
                         exit(-1);
