@@ -31,7 +31,7 @@ int main(){
 
     std::function<Eigen::Matrix<double, T, 1>(double,Eigen::Matrix<double, T, 1>)> propagate = [=] (double t, Eigen::Matrix<double,T,1> state){
         Eigen::Matrix<double, T, 1> derivative;
-        calculate_derivative_rotating_c(state,mu,derivative);
+        calculate_derivative_rotating(state,mu,derivative);
         return derivative;
     };
 
@@ -49,10 +49,10 @@ int main(){
     Eigen::Matrix<double,6,1> state_rnd;
     state_rnd <<    -0.8269,
                 0.3,
-                0.2,
                 0.0,
+                0.00,
                 0.055,
-                -0.3;
+                0;
 
     Eigen::Matrix<double,6,1> state_L3_backwards;
     state_L3_backwards << 0.923242292247814,0.103708031297204,0.0670944875335092,-0.122382429529801,-0.0484255404818714,-0.031329172693031;
@@ -60,7 +60,7 @@ int main(){
     Eigen::Matrix<double,6,1> state_rnd_backwards;
     state_rnd_backwards << -0.429702389263953,0.678979090260221,0.073379385666045,-0.131232922917919,-0.332455139255467,-0.0357207393086383;
 
-    Eigen::Matrix<double,6,1> state = state_rnd_backwards;
+    Eigen::Matrix<double,6,1> state = state_rnd;
     double t = 0.0; 
     rk_integrator.set_state(state);
     
@@ -71,13 +71,10 @@ int main(){
     for(int i = 0;i<STEPS;i++){
         t+=dt;
         rk_integrator.step(dt);
-        if(i%100 == 0){
+        if(i%100 == 0)
+        {
             Eigen::Matrix<double,6,1> state_rotating = rk_integrator.get_state();
-            Eigen::Matrix<double,6,6> R_rotating_inertial = Eigen::Matrix<double,6,6>::Zero();
-            R_rotating_inertial.block(0,0,3,3) = r_rotating_inertial(t);
-            R_rotating_inertial.block(3,3,3,3) = r_rotating_inertial(t);
-            Eigen::Matrix<double,6,1> state = R_rotating_inertial*state_rotating;
-            of << t << ',' << state.transpose().format(csv_format) << '\n';
+            of << t << ',' << state_rotating.transpose().format(csv_format) << '\n';
         }
     }
     of.close();

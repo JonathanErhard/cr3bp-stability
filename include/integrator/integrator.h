@@ -19,7 +19,8 @@ public:
     integrator(std::function<Eigen::Matrix<double, T, 1>(double,Eigen::Matrix<double, T, 1>)> function): m_function(function){}
 
     void set_state(const Eigen::Matrix<double,T,1>& state){
-        m_state = state;
+        for(int i = 0;i<T;i++)
+            m_state(i) = state(i);
     }
 
     Eigen::Matrix<double, T, 1> get_state(){
