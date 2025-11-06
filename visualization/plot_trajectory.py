@@ -63,9 +63,5 @@ def plot_radius(file):
 
     plt.show()
 
-# plot_orbit_planar("data/CR3BP_L3_forward.csv")
-# plot_orbit_planar("data/CR3BP_L3_backward.csv")
-# plot_orbit_planar("data/CR3BP_rnd_forward.csv")
-# plot_orbit_planar("data/CR3BP_rnd_backward.csv")
 plot_orbit_planar("data/CR3BP.csv")
 input("DO IT")

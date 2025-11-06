@@ -28,30 +28,14 @@ int main(){
     const double V = 1.025;
     const double PERIOD = 2.361e6;
 
-    
-    // initial state
-    Eigen::Matrix<double,6,1> state_L3;
-    state_L3 <<    -0.8269,
-                0.0,
-                0.0,
-                0.0,
-                0.055,
-                0.0;
-    Eigen::Matrix<double,6,1> state_rnd;
-    state_rnd <<    -0.8269,
+    Eigen::Matrix<double,6,1> state;
+    state <<    -0.8269,
                 0.3,
                 0.0,
                 0.0,
                 0.055,
                 -0.0;
 
-    Eigen::Matrix<double,6,1> state_L3_backwards;
-    state_L3_backwards << 0.923242292247814,0.103708031297204,0.0670944875335092,-0.122382429529801,-0.0484255404818714,-0.031329172693031;
-
-    Eigen::Matrix<double,6,1> state_rnd_backwards;
-    state_rnd_backwards << -0.429702389263953,0.678979090260221,0.073379385666045,-0.131232922917919,-0.332455139255467,-0.0357207393086383;
-
-    Eigen::Matrix<double,6,1> state = state_rnd;
     double t = 0.0; 
     
     std::ofstream of;

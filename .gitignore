@@ -2,3 +2,7 @@
 cr3bp_initial_exploration.ipynb
 .vscode
 visualization/data/*
+build/*
+test_data/*
+visualization/plot_orbit.py
+visualization/plot.py
