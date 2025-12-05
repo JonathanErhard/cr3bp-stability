@@ -13,9 +13,10 @@ namespace CR3BP{
  * @param mu mass parameter [1]
  * @param derivative return [pos_dot,pos_2dot]
  */
+
 template<typename SCALAR_TYPE>
 inline void calculate_derivative_rotating(const Eigen::Matrix<SCALAR_TYPE,6,1>& state, const double mu, Eigen::Matrix<SCALAR_TYPE,6,1>& derivative,
-bool TODO_REMOVE_DBG){
+bool TODO_REMOVE_DBG = false){
 
     //std::cout << state(0) << "," << state(1) << "," << state(3) << "," << state(4) << ":\n";
 
@@ -39,7 +40,7 @@ bool TODO_REMOVE_DBG){
     derivative[2] = dz;
     derivative[3] = x - (mu1 * (x + mu2) / r1_n3_2) - (mu2 * (x - mu1) / r2_n3_2) + 2 * dy;
     derivative[4] = y - (mu1 * y / r1_n3_2) - (mu2 * y / r2_n3_2) - 2 * dx;
-    derivative[5] = z - (mu1 * z /r1_n3_2) - (mu2 * z / r2_n3_2);
+    derivative[5] = - (mu1 * z /r1_n3_2) - (mu2 * z / r2_n3_2);
 
     //std::cout << "der: " << derivative.transpose().format(clean_format) << '\n';
 }
@@ -113,15 +114,10 @@ inline SCALAR_TYPE calculate_hamiltonian_rotating(Eigen::Matrix<SCALAR_TYPE,6,1>
 
     const SCALAR_TYPE U_bar = -0.5*(mu1*sqr(r1)+mu2*sqr(r2)) -mu1/r1 -mu2/r2;
     
-    // H calculated via Dynamical systems, p.32
-    //const SCALAR_TYPE H = 0.5*(sqr(dx)+sqr(dy)+sqr(dz))+U_bar
+    const SCALAR_TYPE U_kin = 0.5*(dx*dx + dy*dy + dz*dz);
 
-    // H calculated via chatgpt
-    const SCALAR_TYPE px = dx-y;
-    const SCALAR_TYPE py = dy+x;
-    const SCALAR_TYPE&pz = dz;
 
-    const SCALAR_TYPE H = 0.5*(sqr(px)+sqr(py)+sqr(pz))+y*px-x*py+U_bar;
+    const SCALAR_TYPE H = U_kin + U_bar;
     return H;
 }
 

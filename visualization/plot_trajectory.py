@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 
 def plot_orbit(file):
     df = pd.read_csv(file)
@@ -26,21 +27,29 @@ def plot_orbit(file):
 def plot_orbit_planar(file):
     df = pd.read_csv(file)
 
-    t = df["t"]
-    x = df["x"]
-    y = df["y"]
+    t = df["t"].to_numpy()
+    x = df["x"].to_numpy()
+    y = df["y"].to_numpy()
 
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.scatter(x, y, c=t, cmap='viridis', label="Trajectory", linewidth=2)
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
 
+    lc = LineCollection(segments, cmap='viridis', norm=plt.Normalize(t.min(), t.max()))
+    lc.set_array(t)
+    lc.set_linewidth(2)
+
+    fig, ax = plt.subplots()
+    line = ax.add_collection(lc)
+    ax.autoscale()
     ax.set_xlabel("X")
     ax.set_ylabel("Y")
-    ax.set_title(f"planar Trajectory of {file}")
-    ax.legend()
+    ax.set_title(f"Planar Trajectory of {file}")
+
+    cbar = fig.colorbar(line, ax=ax)
+    cbar.set_label("Time")
 
     plt.show(block=False)
-
+    
 def plot_radius(file):
     df = pd.read_csv(file)
 
@@ -63,5 +72,7 @@ def plot_radius(file):
 
     plt.show()
 
-plot_orbit_planar("data/CR3BP.csv")
+#plot_orbit_planar("data/states.csv")
+plot_orbit_planar("data/heyoka.csv")
+#plot_orbit_planar("data/CR3BP.csv")
 input("DO IT")
