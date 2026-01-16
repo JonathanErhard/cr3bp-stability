@@ -27,13 +27,13 @@ int main()
 
     //id 1147 halo
     std::vector<double> x0 = {
-        8.2339081983651485E-1, -1.9017764504099543E-28, 9.8941366235910004E-4, -2.3545391932685812E-15, 1.2634272983881797E-1, 2.2367029429442455E-16
+        0,-mu_val, 0, 
+        0, 1e-1,1e-1
     };
-
 
     auto ta = taylor_adaptive<double>{ eqs, x0,kw::tol = 1e-8};
 
-    double tf = 2.7430007981241529E+0;
+    double tf = 0.1;//2.7430007981241529E+0;
 
     auto output = std::get<4>(ta.propagate_for(tf,kw::c_output = true));
 

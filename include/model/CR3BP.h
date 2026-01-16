@@ -1,3 +1,4 @@
+#pragma once
 #include<eigen3/Eigen/Dense>
 
 namespace CR3BP{
@@ -15,8 +16,7 @@ namespace CR3BP{
  */
 
 template<typename SCALAR_TYPE>
-inline void calculate_derivative_rotating(const Eigen::Matrix<SCALAR_TYPE,6,1>& state, const double mu, Eigen::Matrix<SCALAR_TYPE,6,1>& derivative,
-bool TODO_REMOVE_DBG = false){
+inline void calculate_derivative_rotating(const Eigen::Matrix<SCALAR_TYPE,6,1>& state, const double mu, Eigen::Matrix<SCALAR_TYPE,6,1>& derivative){
 
     //std::cout << state(0) << "," << state(1) << "," << state(3) << "," << state(4) << ":\n";
 
@@ -52,7 +52,7 @@ bool TODO_REMOVE_DBG = false){
  * @param t normalized time [T/2PI]
  * @param rotation_matrix return
  */
-template<typename SCALAR_TYPE>
+template<typename SCALAR_TYPE = double>
 inline Eigen::Matrix<SCALAR_TYPE,3,3> r_rotating_inertial(SCALAR_TYPE t){
     Eigen::Matrix<SCALAR_TYPE,3,1> axis(1,0,0);
     return Eigen::AngleAxis<SCALAR_TYPE>(t,axis).toRotationMatrix();
@@ -65,7 +65,7 @@ inline Eigen::Matrix<SCALAR_TYPE,3,3> r_rotating_inertial(SCALAR_TYPE t){
  * @param t normalized time [T/2PI]
  * @param rotation_matrix return
  */
-template<typename SCALAR_TYPE>
+template<typename SCALAR_TYPE = double>
 inline void r_inertial_rotating(SCALAR_TYPE t,Eigen::Matrix<SCALAR_TYPE,3,3>& rotation_matrix){
     Eigen::Matrix<SCALAR_TYPE,3,1> axis(-1,0,0);
     rotation_matrix = Eigen::AngleAxis<SCALAR_TYPE>(t,axis);
@@ -80,7 +80,7 @@ inline void r_inertial_rotating(SCALAR_TYPE t,Eigen::Matrix<SCALAR_TYPE,3,3>& ro
  * @param t [T/PI]
  * @param dt [T/PI]
  */
-template<typename SCALAR_TYPE>
+template<typename SCALAR_TYPE = double>
 inline void propagate_CR3BP(Eigen::Matrix<SCALAR_TYPE,6,1>& state_inertial, double mu, double t, SCALAR_TYPE dt){
     Eigen::Matrix<SCALAR_TYPE,6,1> derivative;
     Eigen::Matrix<SCALAR_TYPE,6,6> r_inertial_rotating = Eigen::Matrix<SCALAR_TYPE,6,6>::Zero();
@@ -95,9 +95,30 @@ inline void propagate_CR3BP(Eigen::Matrix<SCALAR_TYPE,6,1>& state_inertial, doub
     state_inertial = r_rotating_inertial*state_rotating;
 }
 
-template<typename SCALAR_TYPE>
+template<typename SCALAR_TYPE = double>
+inline SCALAR_TYPE calculate_jacobian_rotating(Eigen::Matrix<SCALAR_TYPE,6,1>& state_rotating, double mu){
+    const auto& state = state_rotating; // rename
+
+    const double mu1 = 1-mu;    
+    const double mu2 = mu;
+
+    const SCALAR_TYPE& x =  state[0];
+    const SCALAR_TYPE& y =  state[1];
+    const SCALAR_TYPE& z =  state[2];
+    const SCALAR_TYPE& dx = state[3];
+    const SCALAR_TYPE& dy = state[4];
+    const SCALAR_TYPE& dz = state[5];
+    
+    const SCALAR_TYPE r1 = sqrt(sqr(x+mu2)+sqr(y)+sqr(z));
+    const SCALAR_TYPE r2 = sqrt(sqr(x-mu1)+sqr(y)+sqr(z));
+    const SCALAR_TYPE Omega = 0.5*(sqr(x)+sqr(y))+mu1/r1+mu2/r2;
+
+    return 2*Omega-(sqr(dx)+sqr(dy)+sqr(dz));
+}
+
+template<typename SCALAR_TYPE = double>
 inline SCALAR_TYPE calculate_hamiltonian_rotating(Eigen::Matrix<SCALAR_TYPE,6,1>& state_rotating, double mu){
-    const auto& state = state_rotating;
+    /*const auto& state = state_rotating;
 
     const double mu1 = 1-mu;    
     const double mu2 = mu;
@@ -118,7 +139,8 @@ inline SCALAR_TYPE calculate_hamiltonian_rotating(Eigen::Matrix<SCALAR_TYPE,6,1>
 
 
     const SCALAR_TYPE H = U_kin + U_bar;
-    return H;
+    return H;*/
+    return -0.5*CR3BP::calculate_jacobian_rotating(state_rotating,mu);
 }
 
 #undef sqr

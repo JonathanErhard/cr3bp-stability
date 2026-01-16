@@ -8,7 +8,7 @@ def prtbp(t, x, mu):
 
     r3 = ((x[0] + mu2) ** 2 + x[1] ** 2) ** 1.5  # r: distance to m1, LARGER MASS
     R3 = ((x[0] - mu1) ** 2 + x[1] ** 2) ** 1.5  # R: distance to m2, smaller mass
-    #print(f"r1sqr= {((x[0] + mu2) ** 2 + x[1] ** 2)}")
+    print(f"r1sqr= {((x[0] + mu2) ** 2 + x[1] ** 2)}")
     print(f"r1: {r3}")
     print(f"r2: {R3}")
     print(f"state: {x}")

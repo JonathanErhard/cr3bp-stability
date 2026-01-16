@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/jojo/Projects/numerical-integrator/visualization/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

@@ -8,23 +8,7 @@
 #include <cmath>
 #include <cstring>
 
-// Forward declare the C API from ode.h (the public driver)
-// The real ode.h from Burkardt declares:
-// void ode(void f(double t, double y[], double yp[]), int neqn,
-//          double y[], double *t, double tout, double relerr,
-//          double abserr, int *iflag, double work[], int iwork[] );
-extern "C" {
-    void ode( void f(double t, double y[], double yp[]),
-              int neqn,
-              double y[],
-              double *t,
-              double tout,
-              double relerr,
-              double abserr,
-              int *iflag,
-              double work[],
-              int iwork[] );
-}
+#include <ode.h>
 
 // A thin adapter to let C++ call the C-style callback.
 struct CallbackData {
@@ -33,7 +17,6 @@ struct CallbackData {
 };
 static CallbackData *g_cb = nullptr;
 
-// C-style bridge used by ode()
 extern "C" void c_f(double t, double y[], double yp[]) {
     if (!g_cb) return;
     std::vector<double> Y(g_cb->n);

@@ -38,14 +38,15 @@ int main(){
 
     ExplicitRungeKutta<T,K> rk_integrator = ExplicitRungeKutta<T,K>(propagate,a,b);
 
-    Eigen::Matrix<double,6,1> state;
+    Eigen::Matrix<double,6,1> state = Eigen::Matrix<double,6,1>::Zero();
     						
-    state << -4.1456184803140111E-1,// x
-        2.7726895068890510E-23,// y
-        9.0753120433295065E-1,// z
-        -1.1555581216266303E-12,// px
-        1.4076145460136695E+0,// py
-        3.9979936124406781E-13;// pz
+    //state << -4.1456184803140111E-1,// x
+    //    2.7726895068890510E-23,// y
+    //    9.0753120433295065E-1,// z
+    //    -1.1555581216266303E-12,// px
+    //    1.4076145460136695E+0,// py
+    //    3.9979936124406781E-13;// pz
+
 
     double t = 0.0; 
     rk_integrator.set_state(state);

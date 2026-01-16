@@ -1,44 +1,44 @@
 # heyoka requires at least CMake 3.20.
 cmake_minimum_required(VERSION 3.20.0)
 
-
 set(CMAKE_CXX_COMPILER /opt/gcc-15/bin/g++)
 
-# The name of our project.
 project(sample_project)
 
-include_directories(include)
+include_directories(include /usr/include/eigen3)
 
-# Look for an installation of heyoka in the system.
 find_package(heyoka REQUIRED)
 
-# Create an executable, and link it to the heyoka::heyoka imported target.
-# This ensures that, in the compilation of 'main', heyoka's include
-# dirs are added to the include path of the compiler and that heyoka's
-# dependencies are transitively linked to 'main'.
+#add_executable(CR3BP_heyoka src/CR3BP_heyoka.cpp)
+#add_executable(CR3BP_rk src/CR3BP_rk.cpp)
+#add_executable(CR3BP_vgl src/CR3BP_vgl.cpp)
+#add_executable(test-heyoka-cr3bp-impl src/test-heyoka-cr3bp-impl.cpp)
+#add_executable(fehlberg67-benchmarks src/boost_odeint.cpp)
+add_executable(benchmark-DP5 src/benchmark/DP5.cpp)
+add_executable(benchmark-fehlberg78 src/benchmark/fehlberg78.cpp)
+add_executable(benchmark-bulirsch_stoer src/benchmark/bulirsch_stoer.cpp)
 
-add_executable(CR3BP_heyoka src/CR3BP_heyoka.cpp)
-target_link_libraries(CR3BP_heyoka 
-    heyoka::heyoka
-    /home/jojo/local/lib/libssl.so.3
-    /home/jojo/local/lib/libcrypto.so.3
-    /home/jojo/.local/lib/libboost_serialization.so.1.85.0
-    /home/jojo/.local/lib/libboost_charconv.so.1.85.0
-    /home/jojo/.local/lib/libboost_regex.so.1.85.0
-    /home/jojo/local/lib/libfmt.so.12
-    /home/jojo/local/lib/libspdlog.so.1.16
-    /home/jojo/local/lib/libtbb.so.12
+set(EXECUTABLE_TARGETS
+#    CR3BP_heyoka
+#    CR3BP_rk
+#    CR3BP_vgl
+#    test-heyoka-cr3bp-impl
+#    fehlberg67-benchmarks
+    benchmark-DP5
+    benchmark-fehlberg78
+    benchmark-bulirsch_stoer
 )
 
-add_executable(test-heyoka-cr3bp-impl src/test-heyoka-cr3bp-impl.cpp)
-target_link_libraries(test-heyoka-cr3bp-impl 
-    heyoka::heyoka
-    /home/jojo/local/lib/libssl.so.3
-    /home/jojo/local/lib/libcrypto.so.3
-    /home/jojo/.local/lib/libboost_serialization.so.1.85.0
-    /home/jojo/.local/lib/libboost_charconv.so.1.85.0
-    /home/jojo/.local/lib/libboost_regex.so.1.85.0
-    /home/jojo/local/lib/libfmt.so.12
-    /home/jojo/local/lib/libspdlog.so.1.16
-    /home/jojo/local/lib/libtbb.so.12
-)
+foreach(tgt IN LISTS EXECUTABLE_TARGETS)
+    target_link_libraries(${tgt} PRIVATE
+        heyoka::heyoka
+        /home/jojo/local/lib/libssl.so.3
+        /home/jojo/local/lib/libcrypto.so.3
+        /home/jojo/.local/lib/libboost_serialization.so.1.85.0
+        /home/jojo/.local/lib/libboost_charconv.so.1.85.0
+        /home/jojo/.local/lib/libboost_regex.so.1.85.0
+        /home/jojo/local/lib/libfmt.so.12
+        /home/jojo/local/lib/libspdlog.so.1.16
+        /home/jojo/local/lib/libtbb.so.12
+    )
+endforeach()

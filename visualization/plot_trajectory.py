@@ -72,7 +72,14 @@ def plot_radius(file):
 
     plt.show()
 
-#plot_orbit_planar("data/states.csv")
-plot_orbit_planar("data/heyoka.csv")
-#plot_orbit_planar("data/CR3BP.csv")
-input("DO IT")
+#plot_orbit_planar("../benchmark_output/Dormand-Prince-5/bw_1.csv")
+#plot_orbit_planar("../benchmark_output/Dormand-Prince-5/fw_1.csv")
+#plot_orbit_planar("../benchmark_output/Dormand-Prince-5/both.csv")
+#
+#plot_orbit_planar("../benchmark_output/Dormand-Prince-5/estimated_surrogate.csv")
+#plot_orbit_planar("../benchmark_output/Dormand-Prince-5/exact_surrogate.csv")
+#plot_orbit_planar("../benchmark_output/Dormand-Prince-5/exact_and_estimated_surrogate.csv")
+
+# plot
+
+# input("DO IT")
