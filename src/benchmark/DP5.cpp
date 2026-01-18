@@ -12,6 +12,7 @@
 #include <benchmark/roundtrip_closure.h>
 #include <benchmark/surrogate.h>
 #include <benchmark/hamiltonian.h>
+#include <benchmark/utility.h>
 
 #include <dbg.h>
 
@@ -23,15 +24,37 @@ using trajectory_type = std::vector<std::pair<double,state_type>>;
 
 using DP5 = odeint::runge_kutta_dopri5<state_type>;
 
+struct dp5_wrapper{
+    odeint::dense_output_runge_kutta<odeint::controlled_runge_kutta<DP5>> stepper;
+    dp5_wrapper(double abs, double rel){
+        stepper = make_dense_output(
+        abs,
+        rel,
+        DP5{}
+        );
+    }
+
+    template<class System>
+    trajectory_type integrate(System system, state_type x0, double t0, double tf, double dt){
+        trajectory_type traj;
+        trajectory_observer<state_type> obs(traj);
+        odeint::integrate_const(
+            system,
+            x0,
+            t0,
+            tf,
+            dt,
+            obs
+        );
+        return obs.traj;
+    }
+};
+
 int main(){
     // set up integrator + directory to store benchmark results
     const std::string integrator_name = "Dormand-Prince-5";
-
-    odeint::dense_output_runge_kutta<odeint::controlled_runge_kutta<DP5>> subject = make_dense_output(
-        INTEGRATOR_PARAMETERS::absolute_tolerance,
-        INTEGRATOR_PARAMETERS::relative_tolerance,
-        DP5{}
-    );
+    dp5_wrapper subject{INTEGRATOR_PARAMETERS::absolute_tolerance,
+            INTEGRATOR_PARAMETERS::relative_tolerance};
 
     const std::string file_path_prefix = "../benchmark_output/" + integrator_name;
     std::filesystem::create_directories(file_path_prefix);
@@ -52,7 +75,7 @@ int main(){
             INTEGRATOR_PARAMETERS::grid_resolution
         );
         double max_l2 = compare_trajectories(fwd_traj,bwd_traj);
-
+        
         // calculate hamiltonian error of the forward trajectory
         auto hamiltonian_error = cr3bp_benchmarks::hamiltonian_conservation_benchmark(fwd_traj, INTEGRATOR_PARAMETERS::mu);
         
@@ -60,33 +83,34 @@ int main(){
         std::string directory_path = file_path_prefix + '/' + INTEGRATOR_PARAMETERS::rbc::names[index];
         
         std::filesystem::create_directories(directory_path);
-
+        
         save_trajectory(fwd_traj, directory_path + "/fw_1.csv");
         save_trajectory(bwd_traj, directory_path + "/bw_1.csv");
         trajectory_type joined_traj;
         std::copy(fwd_traj.begin(),fwd_traj.end(),std::back_inserter(joined_traj));
         joined_traj.insert(joined_traj.end(),bwd_traj.begin(),bwd_traj.end());
         save_trajectory(joined_traj, directory_path + "/fw_bw.csv");
-
+        
         save_numeric_error(hamiltonian_error, directory_path + "/hamiltonian_error.csv");
         
-    }
+        }
+        /*
 
-    for(int index = 0;index<INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions.size();index++){
-        auto x0 = INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions[index];
-        // loop through surrogate_p1 starting positions
-        /* surrogate model using kepler orbit*/
-        const auto& [exact_traj,estimated_traj] = cr3bp_benchmarks::surrogate_p1_benchmark(subject,x0,
+for(int index = 0;index<INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions.size();index++){
+    auto x0 = INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions[index];
+    // loop through surrogate_p1 starting positions
+    /// surrogate model using kepler orbit
+    const auto& [exact_traj,estimated_traj] = cr3bp_benchmarks::surrogate_p1_benchmark(subject,x0,
         0,
         100,
         INTEGRATOR_PARAMETERS::grid_resolution);
-
-        /* safe results to file*/
+        
+        /// safe results to file
         // save surrogate error
         std::string directory_path = file_path_prefix + '/' + INTEGRATOR_PARAMETERS::surrogate_p1::names[index];
         
         std::filesystem::create_directories(directory_path);
-
+        
         save_trajectory(exact_traj, directory_path + "/exact_surrogate.csv");
         save_trajectory(estimated_traj, directory_path + "/estimated_surrogate.csv");
         trajectory_type t1;
@@ -96,4 +120,5 @@ int main(){
     }
     std::cout << "Files written to " << file_path_prefix << "/<csv-files>.\n";
     return 0;
+    */
 }

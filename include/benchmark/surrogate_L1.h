@@ -182,4 +182,4 @@ surrogate_L1_benchmark(
     return { exact, numerical };
 }
 
-} // namespace cr3bp_benchmarks
+} // benchmark namespace
