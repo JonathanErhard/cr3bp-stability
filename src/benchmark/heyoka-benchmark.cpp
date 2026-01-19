@@ -1,75 +1,82 @@
-// ALthough I wrote this file myself, nilsdeppe's guide (https://gist.github.com/nilsdeppe/83752fa92e036254a299fb9a4139a83b) on how to use dense output steppers was a huge help and some of the code will look similar, although I did not copy it directly.
-
 #include <array>
-#include <boost/numeric/odeint.hpp>
 #include <functional>
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <filesystem>
 
-#include <model/CR3BP.h>
 #include <benchmark/roundtrip_closure.h>
 #include <benchmark/surrogate.h>
 #include <benchmark/hamiltonian.h>
-#include <benchmark/utility.h>
+
+#include <heyoka/taylor.hpp>
+#include <model/cr3bp_heyoka_expressions.h>
 
 #include <dbg.h>
 
 #include <cfg/benchmark-hyper-parameters.h>
 
 using state_type = std::array<double, 6>;
-namespace odeint = boost::numeric::odeint;
 using trajectory_type = std::vector<std::pair<double,state_type>>;
 
-using DP5 = odeint::runge_kutta_dopri5<state_type>;
+using namespace heyoka;
 
-struct dp5_wrapper{
-    odeint::dense_output_runge_kutta<odeint::controlled_runge_kutta<DP5>> stepper;
-    dp5_wrapper(double abs, double rel){
-        stepper = make_dense_output(
-        abs,
-        rel,
-        DP5{}
-        );
+struct taylor_adaptive_wrappper{
+    double m_abs, m_rel;
+    taylor_adaptive_wrappper(double abs, double rel){
+        m_abs = abs;
+        m_rel = rel;
     }
 
     template<class System>
     trajectory_type integrate(System system, state_type x0, double t0, double tf, double dt){
+        // maybe I need to switch if dt is negative?
+        std::vector<double> x0_vec;
+        for(int i = 0;i<6;i++)
+            x0_vec.push_back(x0[i]);
+        auto ta = taylor_adaptive<double>(system, x0_vec,kw::tol = 1e-8); // TODO set tolerance
+        auto output = std::get<4>(ta.propagate_for(tf,heyoka::kw::c_output = true));
+
         trajectory_type traj;
-        trajectory_observer<state_type> obs(traj);
-        odeint::integrate_const(
-            system,
-            x0,
-            t0,
-            tf,
-            dt,
-            obs
-        );
-        return obs.traj;
+
+        for (double tm = 0; tm<tf; tm+=dt) {
+            (*output)(tm);
+            std::array<double,6> state{
+                output->get_output()[0],
+                output->get_output()[1], 
+                output->get_output()[2],
+                output->get_output()[3],
+                output->get_output()[4],
+                output->get_output()[5]
+            };
+            traj.emplace_back(tm,state);
+        }   
+
+        return traj;
     }
 };
 
+
 int main(){
     // set up integrator + directory to store benchmark results
-    const std::string integrator_name = "Dormand-Prince-5";
-    dp5_wrapper subject{INTEGRATOR_PARAMETERS::absolute_tolerance,
+    const std::string integrator_name = "Heyoka";
+    taylor_adaptive_wrappper subject{INTEGRATOR_PARAMETERS::absolute_tolerance,
             INTEGRATOR_PARAMETERS::relative_tolerance};
 
     const std::string file_path_prefix = "../benchmark_output/" + integrator_name;
     std::filesystem::create_directories(file_path_prefix);
     
     // set up model
-    std::function<void(state_type&,state_type&,double)> cr3bp_model = [&](const state_type& q,state_type& dq,double t){cr3bp(q,dq,t);};
+    auto cr3bp_model = JE::cr3bp_vel(INTEGRATOR_PARAMETERS::mu);
     
     // loop through round-back-closure starting states
     for(int index = 0;index<INTEGRATOR_PARAMETERS::rbc::starting_positions.size();index++){
         auto x0 = INTEGRATOR_PARAMETERS::rbc::starting_positions[index];
 
-        const auto& [fwd_traj,bwd_traj] = roundtrip_closure_benchmark(
+        const auto& [fwd_traj,bwd_traj] = cr3bp_benchmarks::roundtrip_closure_benchmark(
             cr3bp_model,
             subject,
-            INTEGRATOR_PARAMETERS::rbc::starting_positions[0],
+            INTEGRATOR_PARAMETERS::rbc::starting_positions[index],
             0.0,
             INTEGRATOR_PARAMETERS::integration_time,
             INTEGRATOR_PARAMETERS::grid_resolution
@@ -92,21 +99,20 @@ int main(){
         save_trajectory(joined_traj, directory_path + "/fw_bw.csv");
         
         save_numeric_error(hamiltonian_error, directory_path + "/hamiltonian_error.csv");
-        
         }
-        /*
 
 for(int index = 0;index<INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions.size();index++){
     auto x0 = INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions[index];
+
     // loop through surrogate_p1 starting positions
-    /// surrogate model using kepler orbit
-    const auto& [exact_traj,estimated_traj] = cr3bp_benchmarks::surrogate_p1_benchmark(subject,x0,
+    const auto& [exact_traj,estimated_traj] = cr3bp_benchmarks::surrogate_p1_benchmark(JE::surrogate_p1_vel(),
+        subject,
+        x0,
         0,
         100,
         INTEGRATOR_PARAMETERS::grid_resolution);
         
-        /// safe results to file
-        // save surrogate error
+        // safe results to file
         std::string directory_path = file_path_prefix + '/' + INTEGRATOR_PARAMETERS::surrogate_p1::names[index];
         
         std::filesystem::create_directories(directory_path);
@@ -114,11 +120,11 @@ for(int index = 0;index<INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions.
         save_trajectory(exact_traj, directory_path + "/exact_surrogate.csv");
         save_trajectory(estimated_traj, directory_path + "/estimated_surrogate.csv");
         trajectory_type t1;
+
         std::copy(exact_traj.begin(),exact_traj.end(),std::back_inserter(t1));
         t1.insert(t1.end(),estimated_traj.begin(),estimated_traj.end());
         save_trajectory(t1, directory_path + "/exact_and_estimated_surrogate.csv");
     }
     std::cout << "Files written to " << file_path_prefix << "/<csv-files>.\n";
     return 0;
-    */
 }

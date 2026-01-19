@@ -3,13 +3,13 @@ import matplotlib.pyplot as plt
 
 def plot_error(file):
     df = pd.read_csv(file)
-    t = df["t"]
-    rel_err = df["rel"]
-    abs_err = df["abs"]
+    t = df["t"].to_numpy()
+    rel_err = df["rel"].to_numpy()
+    abs_err = df["abs"].to_numpy()
 
     plt.figure()
-    plt.plot(t.to_numpy(), abs_err.to_numpy(), label="Absolute Error")
-    plt.plot(t.to_numpy(), rel_err.to_numpy(), label="Relative Error")
+    plt.plot(t, abs_err, label="Absolute Error")
+    plt.plot(t, rel_err, label="Relative Error")
 
     plt.xlabel("t [s]")
     plt.ylabel("errors")

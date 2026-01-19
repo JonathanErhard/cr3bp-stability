@@ -12,6 +12,8 @@
 #include <heyoka/math/sqrt.hpp>
 #include <heyoka/number.hpp>
 
+#include <cfg/benchmark-hyper-parameters.h>
+
 namespace JE{
     std::vector<std::pair<heyoka::expression,heyoka::expression>> cr3bp_vel(double mu_val){
         auto [x, y, z, dx, dy, dz] = heyoka::make_vars("x", "y", "z", "dx", "dy", "dz");
@@ -41,6 +43,26 @@ namespace JE{
             prime(dx)= dxdot,
             prime(dy)= dydot,
             prime(dz)= dzdot
+        };
+    }
+    std::vector<std::pair<heyoka::expression,heyoka::expression>> surrogate_p1_vel(){
+        const double mu = INTEGRATOR_PARAMETERS::mu;
+
+        auto [x, y, z, dx, dy, dz] = heyoka::make_vars("x", "y", "z", "dx", "dy", "dz");
+
+        const auto r_abs_1 = 1./sqrt(x*x + y*y + z*z); //absolute value of the position, raised to 2/3
+
+        const auto ax = - mu * x * r_abs_1* r_abs_1* r_abs_1;
+        const auto ay = - mu * y * r_abs_1* r_abs_1* r_abs_1;
+        const auto az = - mu * z * r_abs_1* r_abs_1* r_abs_1;
+
+        return{
+            prime(x) = dx,
+            prime(y) = dy,
+            prime(z) = dz,
+            prime(dx)= ax,
+            prime(dy)= ay,
+            prime(dz)= az
         };
     }
 }

@@ -1,7 +1,8 @@
 #pragma once
 #include <benchmark/utility.h>
 
-template <typename System, typename Integrator, typename state_type = std::array<double,6>>
+namespace cr3bp_benchmarks{
+template <typename System, typename Integrator>
 std::pair<std::vector<std::pair<double,state_type>>,std::vector<std::pair<double,state_type>>> roundtrip_closure_benchmark(
     System system,
     Integrator integrator_,
@@ -10,9 +11,6 @@ std::pair<std::vector<std::pair<double,state_type>>,std::vector<std::pair<double
     double tf,
     double dt
 ) {
-    using trajectory_type = std::vector<std::pair<double,state_type>>;
-    namespace odeint = boost::numeric::odeint;
-
     // integrate forward
     state_type x0_fwd(x0); // copy x0 because of const (and rename)
     trajectory_type fwd_traj = integrator_.integrate(
@@ -34,3 +32,4 @@ std::pair<std::vector<std::pair<double,state_type>>,std::vector<std::pair<double
     );
     return {fwd_traj,bwd_traj};
 }
+}; // namespace cr3bp_benchmarks

@@ -15,7 +15,7 @@ namespace cr3bp_benchmarks{
 using state_type = std::array<double, 6>;
 
 // vector arithmetics. In hindsight I should have used eigen
-std::array<double,3> vec(const state_type& s, int offset) {
+std::array<double,3> vec_slice(const state_type& s, int offset) {
     return { s[offset], s[offset+1], s[offset+2] };
 }
 
@@ -73,8 +73,8 @@ std::vector<std::pair<double, state_type>> surrogate_p1_exact(
     double grid_resolution
 ) {
     double samples = duration/grid_resolution;
-    auto r0 = vec(initial, 0);
-    auto v0 = vec(initial, 3);
+    auto r0 = vec_slice(initial, 0);
+    auto v0 = vec_slice(initial, 3);
 
     double r0mag = norm(r0);
     double v0mag = norm(v0);
@@ -167,35 +167,27 @@ void surrogate_p1_ode(const state_type& q, state_type& dq, double t){
     dq[5] = az;
 }
 
-template<class Integrator>
-std::pair<std::vector<std::pair<double,state_type>>,std::vector<std::pair<double,state_type>>> surrogate_p1_benchmark(    Integrator integrator_,
+template <typename System, typename Integrator>
+std::pair<trajectory_type,trajectory_type> surrogate_p1_benchmark(System system,
+    Integrator integrator_,
     const state_type &x0_s,
     double t0,
     double tf,
     double dt){
-    
-    using trajectory_type = std::vector<std::pair<double,state_type>>;
-    namespace odeint = boost::numeric::odeint;
 
     state_type x0(x0_s);
     
     auto exact_traj = surrogate_p1_exact(x0, INTEGRATOR_PARAMETERS::mu, tf,dt);
     
-    trajectory_type estimated_traj;
-    trajectory_observer<state_type> estimation_obs(estimated_traj);
-    std::function<void(state_type&,state_type&,double)> system = [&](const state_type& q,state_type& dq,double t){surrogate_p1_ode(q,dq,t);};
-
-    odeint::integrate_const(
-        integrator_,
-        system,
-        x0,
-        t0,
-        tf,
-        dt,
-        estimation_obs
+    trajectory_type estimated_traj = integrator_.integrate(
+      system,
+      x0,
+      t0,
+      tf,
+      dt
     );
 
     return {exact_traj,estimated_traj};
 }
 
-};
+}; // namespace cr3bp_benchmarks

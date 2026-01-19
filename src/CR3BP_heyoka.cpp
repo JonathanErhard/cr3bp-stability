@@ -31,7 +31,7 @@ int main()
         0, 1e-1,1e-1
     };
 
-    auto ta = taylor_adaptive<double>{ eqs, x0,kw::tol = 1e-8};
+    auto ta = taylor_adaptive<double>(eqs, x0,kw::tol = 1e-8);
 
     double tf = 0.1;//2.7430007981241529E+0;
 

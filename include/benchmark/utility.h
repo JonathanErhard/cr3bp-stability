@@ -104,7 +104,7 @@ inline void save_trajectory(const std::vector<std::pair<double,state_type>>& tra
 inline std::string numeric_error_to_str(const std::vector<cr3bp_benchmarks::numeric_error>& errors){
     std::stringstream ss;
     ss << "t,abs,rel\n";
-    for(auto& [time, rel, abs]:errors) ss << time << ", " << rel << ", " << abs << ", " << '\n'; // could use fmt maybe?
+    for(auto& [time, rel, abs]:errors) ss << time << ", " << rel << ", " << abs << '\n'; // could use fmt maybe?
     return ss.str();
 }
 
