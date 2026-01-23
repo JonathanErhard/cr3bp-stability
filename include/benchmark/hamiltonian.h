@@ -11,6 +11,9 @@ namespace cr3bp_benchmarks{
         double time;
         double abs_error;
         double rel_error;
+        
+        numeric_error(double t, double abs, double rel)
+        : time(t), abs_error(abs), rel_error(rel) {}
     };
     
     std::vector<numeric_error> hamiltonian_conservation_benchmark(const std::vector<std::pair<double,state_type>>& trajectory, double mu){

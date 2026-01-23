@@ -13,7 +13,7 @@ int main()
 
     double mu_val = 1.215e-2;
 
-    auto eqs = JE::cr3bp_vel(mu_val);
+    auto eqs = cr3bp_heyoka_expr(mu_val);
 		
     //id 940 halo
 //    std::vector<double> x0 = {

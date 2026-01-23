@@ -6,7 +6,7 @@
 #include <filesystem>
 
 #include <benchmark/roundtrip_closure.h>
-#include <benchmark/surrogate.h>
+#include <benchmark/surrogate_P1.h>
 #include <benchmark/hamiltonian.h>
 
 #include <heyoka/taylor.hpp>
@@ -67,7 +67,7 @@ int main(){
     std::filesystem::create_directories(file_path_prefix);
     
     // set up model
-    auto cr3bp_model = JE::cr3bp_vel(INTEGRATOR_PARAMETERS::mu);
+    auto cr3bp_model = cr3bp_heyoka_expr(INTEGRATOR_PARAMETERS::mu);
     
     // loop through round-back-closure starting states
     for(int index = 0;index<INTEGRATOR_PARAMETERS::rbc::starting_positions.size();index++){
@@ -81,7 +81,7 @@ int main(){
             INTEGRATOR_PARAMETERS::integration_time,
             INTEGRATOR_PARAMETERS::grid_resolution
         );
-        double max_l2 = compare_trajectories(fwd_traj,bwd_traj);
+        double max_l2 = compare_trajectories_isochronic(fwd_traj,bwd_traj);
         
         // calculate hamiltonian error of the forward trajectory
         auto hamiltonian_error = cr3bp_benchmarks::hamiltonian_conservation_benchmark(fwd_traj, INTEGRATOR_PARAMETERS::mu);
@@ -105,7 +105,7 @@ for(int index = 0;index<INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions.
     auto x0 = INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions[index];
 
     // loop through surrogate_p1 starting positions
-    const auto& [exact_traj,estimated_traj] = cr3bp_benchmarks::surrogate_p1_benchmark(JE::surrogate_p1_vel(),
+    const auto& [exact_traj,estimated_traj] = cr3bp_benchmarks::surrogate_p1_benchmark(surrogate_p1_heyoka_expr(),
         subject,
         x0,
         0,

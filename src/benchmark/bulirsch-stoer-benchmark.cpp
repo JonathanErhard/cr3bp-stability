@@ -8,7 +8,7 @@
 
 #include <model/CR3BP.h>
 #include <benchmark/roundtrip_closure.h>
-#include <benchmark/surrogate.h>
+#include <benchmark/surrogate_P1.h>
 #include <benchmark/hamiltonian.h>
 
 #include <dbg.h>
@@ -56,8 +56,9 @@ int main(){
     const std::string file_path_prefix = "../benchmark_output/" + integrator_name;
     std::filesystem::create_directories(file_path_prefix);
     
-    // set up model
-    std::function<void(state_type&,state_type&,double)> cr3bp_model = [&](const state_type& q,state_type& dq,double t){cr3bp(q,dq,t);};
+    // set up models
+    std::function<void(const state_type&,state_type&,double)> cr3bp_model = [&](const state_type& q,state_type& dq,double t){cr3bp(q,dq,t);};
+    std::function<void(const state_type&,state_type&,double)> p1_surrogate_model = [&](const state_type& q,state_type& dq,double t){cr3bp_benchmarks::surrogate_p1_ode(q,dq,t);};
     
     // loop through round-back-closure starting states
     for(int index = 0;index<INTEGRATOR_PARAMETERS::rbc::starting_positions.size();index++){
@@ -71,7 +72,7 @@ int main(){
             INTEGRATOR_PARAMETERS::integration_time,
             INTEGRATOR_PARAMETERS::grid_resolution
         );
-        double max_l2 = compare_trajectories(fwd_traj,bwd_traj);
+        double max_l2 = compare_trajectories_isochronic(fwd_traj,bwd_traj);
         
         // calculate hamiltonian error of the forward trajectory
         auto hamiltonian_error = cr3bp_benchmarks::hamiltonian_conservation_benchmark(fwd_traj, INTEGRATOR_PARAMETERS::mu);
@@ -89,30 +90,32 @@ int main(){
         save_trajectory(joined_traj, directory_path + "/fw_bw.csv");
         
         save_numeric_error(hamiltonian_error, directory_path + "/hamiltonian_error.csv");
-        
-        }
+    }
 
-for(int index = 0;index<INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions.size();index++){
-    auto x0 = INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions[index];
+    for(int index = 0;index<INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions.size();index++){
+        auto x0 = INTEGRATOR_PARAMETERS::surrogate_p1::starting_positions[index];
 
-    // loop through surrogate_p1 starting positions
-    const auto& [exact_traj,estimated_traj] = cr3bp_benchmarks::surrogate_p1_benchmark(
-        [&](const state_type& q,state_type& dq,double t){cr3bp_benchmarks::surrogate_p1_ode(q,dq,t);},
-        subject,
-        x0,
-        0,
-        100,
-        INTEGRATOR_PARAMETERS::grid_resolution);
-        
+        // loop through surrogate_p1 starting positions
+        const auto& [exact_traj,estimated_traj] = cr3bp_benchmarks::surrogate_p1_benchmark(
+            p1_surrogate_model,
+            subject,
+            x0,
+            0,
+            100,
+            INTEGRATOR_PARAMETERS::grid_resolution
+        );
+            
         // safe results to file
         std::string directory_path = file_path_prefix + '/' + INTEGRATOR_PARAMETERS::surrogate_p1::names[index];
         
         std::filesystem::create_directories(directory_path);
         
+        // save trajectories
         save_trajectory(exact_traj, directory_path + "/exact_surrogate.csv");
         save_trajectory(estimated_traj, directory_path + "/estimated_surrogate.csv");
+        
+        // save both trajectories one after the other for plotting purposes
         trajectory_type t1;
-
         std::copy(exact_traj.begin(),exact_traj.end(),std::back_inserter(t1));
         t1.insert(t1.end(),estimated_traj.begin(),estimated_traj.end());
         save_trajectory(t1, directory_path + "/exact_and_estimated_surrogate.csv");

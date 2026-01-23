@@ -5,7 +5,7 @@
 
 # include "ode.h"
 
-/******************************************************************************/
+// header to compile the ode implementation found <somewhere on the internet>
 
 void de 
 ( 

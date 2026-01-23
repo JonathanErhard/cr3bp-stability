@@ -8,7 +8,7 @@
 
 #include <model/CR3BP.h>
 #include <benchmark/roundtrip_closure.h>
-#include <benchmark/surrogate.h>
+#include <benchmark/surrogate_P1.h>
 #include <benchmark/hamiltonian.h>
 
 #include <dbg.h>
@@ -70,7 +70,7 @@ int main(){
             INTEGRATOR_PARAMETERS::integration_time,
             INTEGRATOR_PARAMETERS::grid_resolution
         );
-        double max_l2 = compare_trajectories(fwd_traj,bwd_traj);
+        double max_l2 = compare_trajectories_isochronic(fwd_traj,bwd_traj);
         
         // calculate hamiltonian error of the forward trajectory
         auto hamiltonian_error = cr3bp_benchmarks::hamiltonian_conservation_benchmark(fwd_traj, INTEGRATOR_PARAMETERS::mu);

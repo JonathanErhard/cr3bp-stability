@@ -16,9 +16,11 @@
 #define STATE_DIM 13
 #define MEASUREMENT_DIM 7
 
+#define SCALAR_TYPE double
+
 // UKF constants
 const double alpha = 1e-3;  // spead of sigma points
-const double kappa = 0;     // TODO
+const double kappa = 0;
 const double beta = 2;      // parameter discribing the distribution. For gaus 2 is optimal usually used [1]
 
 const double lambda = alpha * alpha * (STATE_DIM + kappa) - STATE_DIM;
