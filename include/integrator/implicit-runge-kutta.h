@@ -2,33 +2,48 @@
 #include <array>
 #include <functional>
 #include <iostream>
+
 #include <Eigen/Dense>
+#include <unsupported/Eigen/AutoDiff>
 
 #include "runge-kutta.h"
 
 /**
- * @brief General implicit Runge-Kutta integrator
+ * @brief General implicit Runge-Kutta integrator (Newton solve on stages)
  *
- * @tparam T dimension of the state
- * @tparam K number of stages
+ * Expectations on `System`:
+ *   - `System` must be callable with both double-valued and AutoDiff-valued states.
+ *   - In particular, `system(t, x)` should work when `x` is:
+ *       Eigen::Matrix<double, T, 1> and Eigen::Matrix<ADScalar, T, 1>
+ *
+ * This allows computing the stage Jacobian via automatic differentiation
+ * (no finite differences).
+ *
+ * @tparam System RHS functor/system (templated/overloaded to accept AutoDiff scalar)
+ * @tparam T      dimension of the state
+ * @tparam K      number of stages
  */
-template <size_t T, size_t K>
-class ImplicitRungeKutta : public RungeKutta<T, K> {
+template <class System, size_t T, size_t K>
+class ImplicitRungeKutta : public RungeKutta<System, T, K> {
 public:
-// maybe I should use that convetion in the other files as well :/
-    using VectorT = Eigen::Matrix<double, T, 1>;
-    using MatrixT = Eigen::Matrix<double, T, T>;
-    using StageVector = Eigen::Matrix<double, T*K, 1>;
-    using StageMatrix = Eigen::Matrix<double, T*K, T*K>;
+    using VectorT      = Eigen::Matrix<double, T, 1>;
+    using MatrixT      = Eigen::Matrix<double, T, T>;
+    using StageVector  = Eigen::Matrix<double, T*K, 1>;
+    using StageMatrix  = Eigen::Matrix<double, T*K, T*K>;
+
+    // AutoDiff types for Jacobian calculation
+    using DerivVector  = Eigen::Matrix<double, T, 1>;
+    using ADScalar     = Eigen::AutoDiffScalar<DerivVector>;
+    using VectorAD     = Eigen::Matrix<ADScalar, T, 1>;
 
     ImplicitRungeKutta(
-        std::function<VectorT(double, VectorT)> function,
+        System system,
         const Eigen::Matrix<double, K, K>& a,
         const Eigen::Matrix<double, K, 1>& b,
         size_t newton_iters = 10,
         double tol = 1e-10
     )
-        : RungeKutta<T, K>(function, a, b),
+        : RungeKutta<System, T, K>(system, a, b),
           m_newton_iters(newton_iters),
           m_tol(tol)
     {}
@@ -37,10 +52,10 @@ public:
         // Stage variables stacked into one vector
         StageVector G = StageVector::Zero();
 
-        // Initial guess: explicit Euler
+        // Initial guess: explicit Euler on the stage derivatives
         for (size_t i = 0; i < K; ++i) {
             G.template segment<T>(i*T) =
-                this->m_function(this->m_time, this->m_state);
+                this->m_system(this->m_time, this->m_state);
         }
 
         // Newton iteration
@@ -57,15 +72,16 @@ public:
                 }
 
                 double ti = this->m_time + dt * this->m_C(i);
-                VectorT fi = this->m_function(ti, stage_sum);
+                VectorT fi = this->m_system(ti, stage_sum);
 
-                // Residual: Gi - f(...)
+                // Residual: Gi - f(ti, stage_sum)
                 F.template segment<T>(i*T) =
                     G.template segment<T>(i*T) - fi;
 
-                // Jacobian blocks
-                MatrixT df_dx = numerical_jacobian(ti, stage_sum);
+                // Jacobian df/dx at (ti, stage_sum) via AutoDiff
+                MatrixT df_dx = autodiff_jacobian(ti, stage_sum);
 
+                // Assemble block Jacobian for the stage system
                 for (size_t j = 0; j < K; ++j) {
                     MatrixT block = MatrixT::Zero();
                     if (i == j) {
@@ -73,7 +89,7 @@ public:
                     }
                     block -= dt * this->m_A(i, j) * df_dx;
 
-                    J.template block<T,T>(i*T, j*T) = block;
+                    J.template block<T, T>(i*T, j*T) = block;
                 }
             }
 
@@ -101,15 +117,23 @@ private:
     size_t m_newton_iters;
     double m_tol;
 
-    MatrixT numerical_jacobian(double t, const VectorT& x) {
-        constexpr double eps = 1e-8;
-        MatrixT J;
-        VectorT fx = this->m_function(t, x);
-
+    MatrixT autodiff_jacobian(double t, const VectorT& x) {
+        // Seed AutoDiff variables with identity derivatives
+        VectorAD x_ad;
         for (size_t i = 0; i < T; ++i) {
-            VectorT xp = x;
-            xp(i) += eps;
-            J.col(i) = (this->m_function(t, xp) - fx) / eps;
+            x_ad(i).value() = x(static_cast<int>(i));
+            x_ad(i).derivatives() = DerivVector::Zero();
+            x_ad(i).derivatives()(static_cast<int>(i)) = 1.0;
+        }
+
+        // Evaluate system in AutoDiff mode
+        VectorAD f_ad = this->m_system(t, x_ad);
+
+        // Extract Jacobian: J(r,c) = d f_r / d x_c
+        MatrixT J;
+        for (size_t r = 0; r < T; ++r) {
+            J.row(static_cast<int>(r)) =
+                f_ad(static_cast<int>(r)).derivatives().transpose();
         }
         return J;
     }

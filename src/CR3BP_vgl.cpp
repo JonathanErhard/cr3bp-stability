@@ -13,40 +13,6 @@
 
 using state_type = Eigen::Matrix<double,6,1>;
 
-// the newtonian version of this is defined in 
-struct CR3BP {
-    double mu;
-
-    state_type rhs(const state_type &x) const {
-        state_type f;
-
-        double X = x(0), Y = x(1), Z = x(2);
-        double VX = x(3), VY = x(4), VZ = x(5);
-
-        double mu1 = 1.0 - mu;
-
-        Eigen::Vector3d r1(X + mu, Y, Z);
-        Eigen::Vector3d r2(X - mu1, Y, Z);
-
-        double d1 = r1.norm();
-        double d2 = r2.norm();
-
-        double ax = 2.0 * VY + X
-            - mu1 * (X + mu) / (d1*d1*d1)
-            - mu  * (X - mu1) / (d2*d2*d2);
-
-        double ay = -2.0 * VX + Y
-            - mu1 * Y / (d1*d1*d1)
-            - mu  * Y / (d2*d2*d2);
-
-        double az = - mu1 * Z / (d1*d1*d1)
-                    - mu  * Z / (d2*d2*d2);
-
-        f << VX, VY, VZ, ax, ay, az;
-        return f;
-    }
-};
-
 // One fixed-step Gauss–Legendre (order 4) step
 void gl4_step(const CR3BP &sys, state_type &x, double h)
 {
@@ -57,14 +23,14 @@ void gl4_step(const CR3BP &sys, state_type &x, double h)
     const double b1  = 0.5;
     const double b2  = 0.5;
 
-    state_type k1 = sys.rhs(x);
+    state_type k1 = sys(x);
     state_type k2 = k1;
 
     for (int it = 0; it < 8; ++it) {
         state_type y1 = x + h * (a11 * k1 + a12 * k2);
         state_type y2 = x + h * (a21 * k1 + a22 * k2);
-        k1 = sys.rhs(y1);
-        k2 = sys.rhs(y2);
+        k1 = sys(y1);
+        k2 = sys(y2);
     }
 
     x += h * (b1 * k1 + b2 * k2);

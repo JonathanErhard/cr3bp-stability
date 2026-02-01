@@ -5,6 +5,9 @@
 #define dbg(x) std::cout << #x << ": " << x << '\n'
 #include<model/CR3BP.h>
 #include<integrator/explicit-runge-kutta.h>
+#include<integrator/adaptive-explicit-runge-kutta.h>
+#include<integrator/implicit-runge-kutta.h>
+#include<integrator/adaptive-implicit-runge-kutta.h>
 
 
 #define dt 1e-5
@@ -32,11 +35,11 @@ int main(){
 
     std::function<Eigen::Matrix<double, T, 1>(double,Eigen::Matrix<double, T, 1>)> propagate = [=] (double t, Eigen::Matrix<double,T,1> state){
         Eigen::Matrix<double, T, 1> derivative;
-        calculate_derivative_rotating(state,mu,derivative,false);
+        CR3BP::calculate_derivative_rotating(state,mu,derivative);
         return derivative;
     };
 
-    ExplicitRungeKutta<T,K> rk_integrator = ExplicitRungeKutta<T,K>(propagate,a,b);
+    ExplicitRungeKutta< decltype(propagate), T,K> rk_integrator = ExplicitRungeKutta<decltype(propagate), T,K>(propagate,a,b);
 
     Eigen::Matrix<double,6,1> state = Eigen::Matrix<double,6,1>::Zero();
     						

@@ -113,27 +113,63 @@ inline void save_numeric_error(const std::vector<cr3bp_benchmarks::numeric_error
     of.close();
 }
 
-template<class state_type = std::array<double,6>>
-double compare_trajectories_isochronic(
-    const std::vector<std::pair<double,state_type>>& reference_trajectory,
-    const std::vector<std::pair<double,state_type>>& predicted_trajectory){
-    std::size_t n = std::min(reference_trajectory.size(), predicted_trajectory.size()); 
+template<class state_type = std::array<double, 6>>
+/*std::vector<double>*/ double compare_trajectories_isochronous(
+    const std::vector<std::pair<double, state_type>>& reference,
+    const std::vector<std::pair<double, state_type>>& predicted) 
+{
+    std::vector<double> distances;
+    distances.reserve(predicted.size());
 
-    double max_l2 = 0.0;
+    // Persistent iterator: start searching from the beginning once
+    auto it_ref = reference.begin();
 
-    for (std::size_t i = 0; i < n; ++i)
-        max_l2 = std::max(
-            max_l2,
-            l2_error(reference_trajectory[i].second, predicted_trajectory[n-i-1].second)
-        );
+    for (const auto& [t_pred, x_pred] : predicted) {
+        
+        // Advance it_ref until it points to an element >= t_pred
+        // We stop at reference.end() - 1 to ensure we can always interpolate with 'next'
+        while (std::next(it_ref) != reference.end() && std::next(it_ref)->first < t_pred) {
+            ++it_ref;
+        }
 
-    return max_l2;
+        auto it_next = std::next(it_ref);
+
+        // Boundary: t_pred is before the current reference window
+        if (t_pred <= it_ref->first) {
+            distances.push_back(l2_error(x_pred, it_ref->second));
+        }
+        // Boundary: t_pred is beyond the current reference window (end of reference)
+        else if (it_next == reference.end()) {
+            distances.push_back(l2_error(x_pred, it_ref->second));
+        }
+        // General Case: t_pred is between it_ref and it_next
+        else {
+            const auto& lower = *it_ref;
+            const auto& upper = *it_next;
+            
+            double t_lo = lower.first;
+            double t_up = upper.first;
+            
+            // Linear interpolation factor
+            double alpha = (t_pred - t_lo) / (t_up - t_lo);
+
+            state_type x_interp;
+            for (int i = 0; i < 6; ++i) {
+                x_interp[i] = lower.second[i] + alpha * (upper.second[i] - lower.second[i]);
+            }
+
+            distances.push_back(l2_error(x_pred, x_interp));
+        }
+    }
+    return *std::max_element(distances.begin(), distances.end());
+    //return distances;
 }
 
 template <class state_type = std::array<double, 6>>
 std::vector<std::pair<double, double>> compare_traj_normals(
     const std::vector<std::pair<double, state_type>>& traj1,
-    const std::vector<std::pair<double, state_type>>& traj2) 
+    const std::vector<std::pair<double, state_type>>& traj2
+)
 {
     std::vector<std::pair<double, double>> result;
     if (traj1.size() < 2 || traj2.empty()) return result;

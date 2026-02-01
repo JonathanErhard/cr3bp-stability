@@ -44,6 +44,7 @@ std::vector<std::pair<heyoka::expression,heyoka::expression>> cr3bp_heyoka_expr(
         prime(dz)= dzdot
     };
 }
+
 std::vector<std::pair<heyoka::expression,heyoka::expression>> surrogate_p1_heyoka_expr(){
     const double mu = INTEGRATOR_PARAMETERS::mu;
 

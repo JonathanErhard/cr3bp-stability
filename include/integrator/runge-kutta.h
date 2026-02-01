@@ -1,3 +1,4 @@
+#pragma once
 #include "integrator.h"
 
 /**
@@ -7,20 +8,20 @@
  * @tparam K dimension of the RK weight matrix (triangular for explicit, any for implicit)
  */
 
-template <size_t T, size_t K>
-class RungeKutta : public integrator<T>{
+template <class System,size_t T, size_t K>
+class RungeKutta : public integrator<System,T>{
 protected:
     const Eigen::Matrix<double, K, K> m_A;
     const Eigen::Matrix<double, K, 1> m_B;
     Eigen::Matrix<double, K, 1> m_C;
 public:
     RungeKutta(
-        std::function<Eigen::Matrix<double, T, 1>(double t, Eigen::Matrix<double, T, 1>)> function,
+        System system,
         const Eigen::Matrix<double, K, K> a,
         const Eigen::Matrix<double, K, 1> b):
         m_A(a),
         m_B(b),
-        integrator<T>(function)
+        integrator<System,T>(system)
         {
             // set c weights
             for(int i = 0;i<K;i++){

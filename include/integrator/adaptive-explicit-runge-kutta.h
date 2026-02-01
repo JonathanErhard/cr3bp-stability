@@ -4,20 +4,20 @@
 
 #include "runge-kutta.h"
 
-template <size_t T, size_t K>
-class AdaptiveExplicitRungeKutta : public RungeKutta<T, K> {
+template <class System, size_t T, size_t K>
+class AdaptiveExplicitRungeKutta : public RungeKutta<System, T, K> {
 public:
     using VectorT = Eigen::Matrix<double, T, 1>;
 
     AdaptiveExplicitRungeKutta(
-        std::function<VectorT(double, VectorT)> function,
+        System system,
         const Eigen::Matrix<double, K, K>& a,
         const Eigen::Matrix<double, K, 1>& b_high,
         const Eigen::Matrix<double, K, 1>& b_low,
         double tol = 1e-8,
         double safety = 0.9
     )
-        : RungeKutta<T, K>(function, a, b_high),
+        : RungeKutta<System, T, K>(system, a, b_high),
           m_b_low(b_low),
           m_tol(tol),
           m_safety(safety)
@@ -40,7 +40,7 @@ public:
             for (size_t j = 0; j < i; ++j) {
                 input += dt * this->m_A(i, j) * g[j];
             }
-            g[i] = this->m_function(this->m_time + dt * this->m_C(i), input);
+            g[i] = this->m_system(this->m_time + dt * this->m_C(i), input);
         }
 
         VectorT high = VectorT::Zero();

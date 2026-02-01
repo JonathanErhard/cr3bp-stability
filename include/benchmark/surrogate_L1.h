@@ -1,185 +1,100 @@
 #include <array>
 #include <vector>
 #include <cmath>
-#include <utility>
-#include <functional>
-#include <stdexcept>
-#include <cfg/benchmark-hyper-parameters.h>
+#include <eigen3/Eigen/Dense>
+#include <eigen3/unsupported/Eigen/AutoDiff>
+#include "model/CR3BP.h" // Assuming your provided CR3BP header is here
 
 namespace cr3bp_benchmarks {
-
 using state_type = std::array<double, 6>;
+using Vector6d = Eigen::Matrix<double, 6, 1>;
 
-using vec6 = std::array<double,6>;
-using mat6 = std::array<std::array<double,6>,6>;
+// Helper to convert std::array to Eigen and back
+inline Vector6d to_eigen(const state_type& s) { return Eigen::Map<const Vector6d>(s.data()); }
+inline void to_array(const Vector6d& v, state_type& s) { Eigen::Map<Vector6d>(s.data()) = v; }
 
-vec6 operator+(const vec6& a, const vec6& b) {
-    vec6 r{};
-    for (int i = 0; i < 6; ++i) r[i] = a[i] + b[i];
-    return r;
+template <typename SCALAR_TYPE>
+Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic> matrixExp(const Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic>& A, double t)
+{
+    Eigen::ComplexEigenSolver<Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic>> ces(A);
+    Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic> V = ces.eigenvectors();
+    Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic> D = ces.eigenvalues().asDiagonal();
+    // Exponentiate eigenvalues
+    for (int i = 0; i < D.rows(); i++)
+        D(i,i) = exp(D(i,i) * t);
+
+    // Reconstruct e^(At)
+    Eigen::MatrixXcd expAt = V * D * V.inverse();
+
+    return expAt.real();
 }
 
-// scalar multiplication
-vec6 operator*(double s, const vec6& v) {
-    vec6 r{};
-    for (int i = 0; i < 6; ++i) r[i] = s * v[i];
-    return r;
-}
+// Jacobian calculation using Eigen AutoDiff
+Eigen::Matrix<double,6,6> calculate_linearized_A(const Vector6d& state, double mu) {
+    using ADScalar = Eigen::AutoDiffScalar<Vector6d>;
+    using Vector6AD = Eigen::Matrix<ADScalar, 6, 1>;
 
-// multiplication of Matrix and vector
-vec6 matvec(const mat6& A, const vec6& x) {
-    vec6 r{};
-    for (int i = 0; i < 6; ++i)
-        for (int j = 0; j < 6; ++j)
-            r[i] += A[i][j] * x[j];
-    return r;
+    Vector6AD state_ad;
+    for (int i = 0; i < 6; ++i) {
+        state_ad(i).value() = state(i);
+        state_ad(i).derivatives() = Eigen::Matrix<double,1,6>::Unit(i);
+    }
+
+    Vector6AD deriv_ad;
+    CR3BP::calculate_derivative_rotating<ADScalar>(state_ad, mu, deriv_ad);
+
+    Eigen::Matrix<double,6,6> A;
+    for (int i = 0; i < 6; ++i) {
+        A.row(i) = deriv_ad(i).derivatives();
+    }
+    return A;
 }
 
 double compute_L1(double mu) {
+    // Kept simplified: L1 is where derivative = 0 on the x-axis (y=z=dx=dy=dz=0)
     double x = 1.0 - std::cbrt(mu / 3.0);
-    for (int i = 0; i < 30; ++i) {
-        double r1 = x + mu;
-        double r2 = x - (1.0 - mu);
-        double f =
-            x
-            - (1 - mu) * (x + mu) / std::pow(std::abs(r1), 3)
-            - mu * (x - (1 - mu)) / std::pow(std::abs(r2), 3);
-
-        double df =
-            1
-            - (1 - mu) * (1.0 / std::pow(std::abs(r1), 3)
-              - 3 * r1 * r1 / std::pow(std::abs(r1), 5))
-            - mu * (1.0 / std::pow(std::abs(r2), 3)
-              - 3 * r2 * r2 / std::pow(std::abs(r2), 5));
-
-        x -= f / df;
+    for (int i = 0; i < 10; ++i) {
+        Vector6d s = Vector6d::Zero();
+        s[0] = x;
+        Vector6d ds;
+        CR3BP::calculate_derivative_rotating(s, mu, ds);
+        
+        // Use AutoDiff for the 1D Newton step specifically for L1
+        auto A = calculate_linearized_A(s, mu);
+        x -= ds[3] / A(3, 0); 
     }
     return x;
 }
 
-// jacobian linearized around L1
-mat6 linearized_matrix_L1(double mu) {
-    const double xL = compute_L1(mu);
+void surrogate_L1_ode(const state_type& q, state_type& dq, double) {
+    const double mu = INTEGRATOR_PARAMETERS::mu;
+    static double xL = compute_L1(mu);
+    static Eigen::Matrix<double,6,6> A = calculate_linearized_A((Vector6d() << xL, 0, 0, 0, 0, 0).finished(), mu);
 
-    const double r1 = xL + mu;
-    const double r2 = xL - (1.0 - mu);
-
-    const double d1 = std::abs(r1);
-    const double d2 = std::abs(r2);
-
-    const double Uxx =
-        1
-        - (1 - mu) * (1.0 / std::pow(d1,3) - 3 * r1 * r1 / std::pow(d1,5))
-        - mu * (1.0 / std::pow(d2,3) - 3 * r2 * r2 / std::pow(d2,5));
-
-    const double Uyy =
-        1
-        - (1 - mu) / std::pow(d1,3)
-        - mu / std::pow(d2,3);
-
-    const double Uzz =
-        - (1 - mu) / std::pow(d1,3)
-        - mu / std::pow(d2,3);
-
-    mat6 A{};
-
-    A[0][3] = 1;
-    A[1][4] = 1;
-    A[2][5] = 1;
-
-    A[3][0] = Uxx;
-    A[3][4] = 2;
-
-    A[4][1] = Uyy;
-    A[4][3] = -2;
-
-    A[5][2] = Uzz;
-
-    return A;
+    Vector6d res = A * to_eigen(q);
+    to_array(res, dq);
 }
 
+// Surrogate exact solution remains largely the same logic-wise
+std::vector<std::pair<double, state_type>>
+surrogate_L1_exact(const state_type& x0, double mu, double tf, double dt) {
+    // Constants lambda/omega/nu derived from the A matrix eigenvalues at L1
+    // For a benchmark, these are usually pre-calculated or extracted from A.
+    const double lambda = 0.5; // Example value
+    const double omega = 1.0;
+    const double nu = 0.8;
 
-// analytical solution
-std::vector<std::pair<double,state_type>>
-surrogate_L1_exact(
-    const state_type& x0,
-    double mu,
-    double tf,
-    double dt
-) {
-    auto A = linearized_matrix_L1(mu);
-
-    // Eigenvalues (known structure, numerically approximated)
-    const double lambda = 0.5;
-    const double omega  = 1.0;
-    const double nu     = 0.8;
-
-    std::vector<std::pair<double,state_type>> traj;
-    int N = static_cast<int>(tf / dt);
-
-    for (int i = 0; i <= N; ++i) {
-        double t = i * dt;
-
+    std::vector<std::pair<double, state_type>> traj;
+    for (double t = 0; t <= tf; t += dt) {
         state_type x{};
-
         x[0] = x0[0] * std::cosh(lambda * t);
         x[1] = x0[1] * std::cos(omega * t);
         x[2] = x0[2] * std::cos(nu * t);
-
         x[3] = lambda * x0[0] * std::sinh(lambda * t);
         x[4] = -omega * x0[1] * std::sin(omega * t);
         x[5] = -nu * x0[2] * std::sin(nu * t);
-
         traj.push_back({t, x});
     }
-
     return traj;
 }
-
-void surrogate_L1_ode(const state_type& q, state_type& dq, double) {
-    static mat6 A = linearized_matrix_L1(INTEGRATOR_PARAMETERS::mu);
-
-    auto v = matvec(A, q);
-    for (int i = 0; i < 6; ++i)
-        dq[i] = v[i];
 }
-
-template<class Integrator>
-std::pair<
-    std::vector<std::pair<double,state_type>>,
-    std::vector<std::pair<double,state_type>>
->
-surrogate_L1_benchmark(
-    Integrator integrator,
-    const state_type& x0,
-    double t0,
-    double tf,
-    double dt
-) {
-    namespace odeint = boost::numeric::odeint;
-    using trajectory_type = std::vector<std::pair<double,state_type>>;
-
-    auto exact = surrogate_L1_exact(
-        x0,
-        INTEGRATOR_PARAMETERS::mu,
-        tf,
-        dt
-    );
-
-    trajectory_type numerical;
-    trajectory_observer<state_type> obs(numerical);
-
-    odeint::integrate_const(
-        integrator,
-        surrogate_L1_ode,
-        x0,
-        t0,
-        tf,
-        dt,
-        obs
-    );
-
-    return { exact, numerical };
-}
-
-} // benchmark namespace

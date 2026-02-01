@@ -5,6 +5,7 @@
 #include <utility>
 #include <cfg/benchmark-hyper-parameters.h>
 #include <functional>
+#include <benchmark/utility.h>
 
 #ifndef sqr
 #define sqr(x) ((x)*(x))
@@ -13,43 +14,58 @@
 namespace cr3bp_benchmarks{
 
 using state_type = std::array<double, 6>;
+    // vector arithmetics. In hindsight using eigen might have been faster idk
+    using vec6 = std::array<double,6>;
+    using mat6 = std::array<std::array<double,6>,6>;
 
-// vector arithmetics. In hindsight I should have used eigen
-std::array<double,3> vec_slice(const state_type& s, int offset) {
-    return { s[offset], s[offset+1], s[offset+2] };
-}
+    vec6 operator+(const vec6& a, const vec6& b) {
+        vec6 r{};
+        for (int i = 0; i < 6; ++i) r[i] = a[i] + b[i];
+        return r;
+    }
 
-std::array<double,3> add(const std::array<double,3>& a,
-                         const std::array<double,3>& b) {
-    return { a[0]+b[0], a[1]+b[1], a[2]+b[2] };
-}
+    // scalar multiplication
+    vec6 operator*(double s, const vec6& v) {
+        vec6 r{};
+        for (int i = 0; i < 6; ++i) r[i] = s * v[i];
+        return r;
+    }
 
-std::array<double,3> sub(const std::array<double,3>& a,
-                         const std::array<double,3>& b) {
-    return { a[0]-b[0], a[1]-b[1], a[2]-b[2] };
-}
+    std::array<double,3> vec_slice(const state_type& s, int offset) {
+        return { s[offset], s[offset+1], s[offset+2] };
+    }
 
-std::array<double,3> mul(const std::array<double,3>& v, double s) {
-    return { v[0]*s, v[1]*s, v[2]*s };
-}
+    std::array<double,3> add(const std::array<double,3>& a,
+                            const std::array<double,3>& b) {
+        return { a[0]+b[0], a[1]+b[1], a[2]+b[2] };
+    }
 
-double dot(const std::array<double,3>& a,
-           const std::array<double,3>& b) {
-    return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
-}
+    std::array<double,3> sub(const std::array<double,3>& a,
+                            const std::array<double,3>& b) {
+        return { a[0]-b[0], a[1]-b[1], a[2]-b[2] };
+    }
 
-std::array<double,3> cross(const std::array<double,3>& a,
-                           const std::array<double,3>& b) {
-    return {
-        a[1]*b[2] - a[2]*b[1],
-        a[2]*b[0] - a[0]*b[2],
-        a[0]*b[1] - a[1]*b[0]
-    };
-}
+    std::array<double,3> mul(const std::array<double,3>& v, double s) {
+        return { v[0]*s, v[1]*s, v[2]*s };
+    }
 
-double norm(const std::array<double,3>& v) {
-    return std::sqrt(dot(v,v));
-}
+    double dot(const std::array<double,3>& a,
+            const std::array<double,3>& b) {
+        return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    }
+
+    std::array<double,3> cross(const std::array<double,3>& a,
+                            const std::array<double,3>& b) {
+        return {
+            a[1]*b[2] - a[2]*b[1],
+            a[2]*b[0] - a[0]*b[2],
+            a[0]*b[1] - a[1]*b[0]
+        };
+    }
+
+    double norm(const std::array<double,3>& v) {
+        return std::sqrt(dot(v,v));
+    }
 
 double solveKeplerElliptic(double M, double e) {
     double E = M;
@@ -72,7 +88,7 @@ std::vector<std::pair<double, state_type>> surrogate_p1_exact(
     double duration,
     double grid_resolution
 ) {
-    double samples = duration/grid_resolution;
+    double num_samples = duration/grid_resolution;
     auto r0 = vec_slice(initial, 0);
     auto v0 = vec_slice(initial, 3);
 
@@ -98,10 +114,10 @@ std::vector<std::pair<double, state_type>> surrogate_p1_exact(
     auto qhat = mul(cross(h, rhat), 1.0 / hmag);
 
     std::vector<std::pair<double, state_type>> trajectory;
-    trajectory.reserve(samples + 1);
+    trajectory.reserve(num_samples + 1);
 
-    for (int i = 0; i <= samples; ++i) {
-        double t = duration * i / samples;
+    for (int i = 0; i <= num_samples; ++i) {
+        double t = duration * i / num_samples;
         double M = n * t;
 
         double nu, r;
@@ -133,7 +149,7 @@ std::vector<std::pair<double, state_type>> surrogate_p1_exact(
 
         trajectory.push_back({
             t,
-            {
+            state_type{
                 rvec[0], rvec[1], rvec[2],
                 vvec[0], vvec[1], vvec[2]
             }

@@ -16,11 +16,14 @@ add_executable(benchmark-fehlberg78 src/benchmark/fehlberg78-benchmark.cpp)
 add_executable(benchmark-DP5 src/benchmark/DP5-benchmark.cpp)
 add_executable(benchmark-heyoka src/benchmark/heyoka-benchmark.cpp)
 
+add_executable(CR3BP_rk src/CR3BP_rk.cpp)
+
 set(heyoka_link_TARGETS
     CR3BP_heyoka
     benchmark-heyoka
 )
 
+# I'm not sure why I have to link those manually
 foreach(tgt IN LISTS heyoka_link_TARGETS)
     target_link_libraries(${tgt} PRIVATE
         heyoka::heyoka
