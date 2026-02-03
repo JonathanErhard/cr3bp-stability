@@ -114,11 +114,11 @@ inline void save_numeric_error(const std::vector<cr3bp_benchmarks::numeric_error
 }
 
 template<class state_type = std::array<double, 6>>
-/*std::vector<double>*/ double compare_trajectories_isochronous(
+std::vector<cr3bp_benchmarks::numeric_error> compare_trajectories_isochronous(
     const std::vector<std::pair<double, state_type>>& reference,
     const std::vector<std::pair<double, state_type>>& predicted) 
 {
-    std::vector<double> distances;
+    std::vector<cr3bp_benchmarks::numeric_error> distances;
     distances.reserve(predicted.size());
 
     // Persistent iterator: start searching from the beginning once
@@ -136,11 +136,11 @@ template<class state_type = std::array<double, 6>>
 
         // Boundary: t_pred is before the current reference window
         if (t_pred <= it_ref->first) {
-            distances.push_back(l2_error(x_pred, it_ref->second));
+            distances.emplace_back(t_pred,l2_error(x_pred, it_ref->second), l2_error(x_pred, it_ref->second) / (l2_error(it_ref->second, std::array<double,6>{0,0,0,0,0,0}) + 1e-15));
         }
         // Boundary: t_pred is beyond the current reference window (end of reference)
         else if (it_next == reference.end()) {
-            distances.push_back(l2_error(x_pred, it_ref->second));
+            distances.emplace_back(t_pred,l2_error(x_pred, it_ref->second), l2_error(x_pred, it_ref->second) / (l2_error(it_ref->second, std::array<double,6>{0,0,0,0,0,0}) + 1e-15));
         }
         // General Case: t_pred is between it_ref and it_next
         else {
@@ -158,64 +158,8 @@ template<class state_type = std::array<double, 6>>
                 x_interp[i] = lower.second[i] + alpha * (upper.second[i] - lower.second[i]);
             }
 
-            distances.push_back(l2_error(x_pred, x_interp));
+            distances.emplace_back(t_pred,l2_error(x_pred, x_interp), l2_error(x_pred, x_interp) / (l2_error(x_interp, std::array<double,6>{0,0,0,0,0,0}) + 1e-15));
         }
     }
-    return *std::max_element(distances.begin(), distances.end());
-    //return distances;
-}
-
-template <class state_type = std::array<double, 6>>
-std::vector<std::pair<double, double>> compare_traj_normals(
-    const std::vector<std::pair<double, state_type>>& traj1,
-    const std::vector<std::pair<double, state_type>>& traj2
-)
-{
-    std::vector<std::pair<double, double>> result;
-    if (traj1.size() < 2 || traj2.empty()) return result;
-
-    size_t ref_idx = 0; 
-
-    // split each point into time and point
-    for (const auto& [tp,p] : traj2) {
-
-        // loop until we find the projection of p
-        while (ref_idx < traj1.size() - 1) {
-            const auto& a1 = traj1[ref_idx].second;
-            const auto& a2 = traj1[ref_idx + 1].second;
-
-            // Vector A = a2 - a1 ; defines the line, B is projected on
-            std::array<double, 3> A = {a2[0]-a1[0], a2[1]-a1[1], a2[2]-a1[2]};
-            // Vector B = p - a1
-            std::array<double, 3> B = {p[0]-a1[0], p[1]-a1[1], p[2]-a1[2]};
-
-            double dot_BA = B[0]*A[0] + B[1]*A[1] + B[2]*A[2];
-            double len_sq_A = A[0]*A[0] + A[1]*A[1] + A[2]*A[2];
-
-            // point is behind the segment
-            if (dot_BA < 0 && ref_idx > 0) {
-                // If we aren't at the very start, we might need to check the previous segment
-                ref_idx--; 
-                continue;
-            }
-
-            // point is past the segment
-            if (dot_BA > len_sq_A && ref_idx < traj1.size() - 2) {
-                ref_idx++;
-                continue;
-            }
-
-            // projection hits segment
-            double proj_len_sq = (dot_BA * dot_BA) / len_sq_A;
-            double dist_sq_B = B[0]*B[0] + B[1]*B[1] + B[2]*B[2];
-            
-            // The "Normal" distance xi is the rejection component
-            double dist = std::sqrt(std::max(0.0, dist_sq_B - proj_len_sq));
-            
-            result.push_back({tp, dist});
-            break; 
-        }
-    }
-
-    return result;
+    return distances;
 }
