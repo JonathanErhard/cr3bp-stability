@@ -113,6 +113,15 @@ inline void save_numeric_error(const std::vector<cr3bp_benchmarks::numeric_error
     of.close();
 }
 
+/**
+ * @brief compares two trajectories in an isochronous manner (interpolating the reference trajectory as needed)
+ * 
+ * @tparam state_type 
+ * @param reference reference trajectory
+ * @param predicted predicted trajectory
+ * @return std::vector<cr3bp_benchmarks::numeric_error> vector of numeric errors at each point in the predicted trajectory
+ */
+
 template<class state_type = std::array<double, 6>>
 std::vector<cr3bp_benchmarks::numeric_error> compare_trajectories_isochronous(
     const std::vector<std::pair<double, state_type>>& reference,
@@ -121,13 +130,9 @@ std::vector<cr3bp_benchmarks::numeric_error> compare_trajectories_isochronous(
     std::vector<cr3bp_benchmarks::numeric_error> distances;
     distances.reserve(predicted.size());
 
-    // Persistent iterator: start searching from the beginning once
     auto it_ref = reference.begin();
 
     for (const auto& [t_pred, x_pred] : predicted) {
-        
-        // Advance it_ref until it points to an element >= t_pred
-        // We stop at reference.end() - 1 to ensure we can always interpolate with 'next'
         while (std::next(it_ref) != reference.end() && std::next(it_ref)->first < t_pred) {
             ++it_ref;
         }

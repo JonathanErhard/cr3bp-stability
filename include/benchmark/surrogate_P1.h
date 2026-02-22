@@ -24,7 +24,6 @@ using state_type = std::array<double, 6>;
         return r;
     }
 
-    // scalar multiplication
     vec6 operator*(double s, const vec6& v) {
         vec6 r{};
         for (int i = 0; i < 6; ++i) r[i] = s * v[i];
@@ -67,6 +66,7 @@ using state_type = std::array<double, 6>;
         return std::sqrt(dot(v,v));
     }
 
+// the next few functions implement keplerian orbit formulars. if the formula is implicit I am using newtons method to solve it.
 double solveKeplerElliptic(double M, double e) {
     double E = M;
     for (int i = 0; i < 50; ++i)
@@ -81,7 +81,7 @@ double solveKeplerHyperbolic(double M, double e) {
     return H;
 }
 
-// this uses exact keplerian orbits to calculate a reference orbit.
+// generate exact reference trajectory
 std::vector<std::pair<double, state_type>> surrogate_p1_exact(
     const state_type& initial,
     double mu,
@@ -159,6 +159,7 @@ std::vector<std::pair<double, state_type>> surrogate_p1_exact(
     return trajectory;
 }
 
+// Surrogate P1 dynamics ODE to use for numeric integration
 void surrogate_p1_ode(const state_type& q, state_type& dq, double t){
     const double mu = INTEGRATOR_PARAMETERS::mu;
     // r1 = 0
@@ -183,6 +184,7 @@ void surrogate_p1_ode(const state_type& q, state_type& dq, double t){
     dq[5] = az;
 }
 
+// run the surrogate benchmarks
 template <typename System, typename Integrator>
 std::pair<trajectory_type,trajectory_type> surrogate_p1_benchmark(System system,
     Integrator integrator_,

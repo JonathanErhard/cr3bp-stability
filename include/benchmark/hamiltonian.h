@@ -7,6 +7,8 @@
 #include <benchmark/benchmark_namespace.h>
 
 namespace cr3bp_benchmarks{
+
+    // Structure to hold numeric error data
     struct numeric_error{
         double time;
         double abs_error;
@@ -16,6 +18,7 @@ namespace cr3bp_benchmarks{
         : time(t), abs_error(abs), rel_error(rel) {}
     };
     
+    // Hamiltonian conservation benchmark
     std::vector<numeric_error> hamiltonian_conservation_benchmark(const std::vector<std::pair<double,state_type>>& trajectory, double mu){
         std::vector<numeric_error> result;
         auto& starting_state_arr = trajectory[0].second;

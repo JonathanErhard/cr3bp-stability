@@ -1,53 +1,90 @@
 
-# N Body Propagation
+# cr3bp stability
 
-This repository contains implementations for basic numeric integrators and a model for the CR3BP.
+This repository implements a stability benchmarking tool as well as implementations of cr3bp dynamics and explicit and implicit RK-integrators
 
-## examples
+## HowTo compile
 
-The examples folder contains 3 files. CR3CP_euler.cpp and CR3CP_rk.cpp calculate a trajectory using the model defined in include/model/CR3BP. The initial state, step_size and mu are hardcoded in the cpp file
+required libraries:
+eigen, heyoka, boost, g++15, c++23
 
-RK-test.cpp contains a basic application of a RK3 integrator.
-
-## HOWTO compile
-
-To compile any of the cpp files create and navigate into the build directory
+Compile benchmarks using
 
 ```bash
 mkdir build && cd build
+cmake ..
+make
 ```
 
-to compile CR3BP_euler.cpp, use
+if CMake struggles to find a library, add
 
 ```bash
-g++ ../examples/CR3BP_euler.cpp -I ../include/ -o CR3BP_euler.out
+-DLIBRARY_NAME_ROOT=/path/to/folder
 ```
 
-to compile CR3BP_rk.cpp, use
+to your cmake command
+
+example:
 
 ```bash
-g++ ../examples/CR3BP_rk.cpp -I ../include/ -o CR3BP_rk.out
+cmake -DBOOST_ROOT=/usr/include/boost ..
 ```
 
-to compile RK-test.cpp, use
+I have created a file TROUBLESHOOT.md in case make struggles to link to heyokas dependencies.
+
+## HowTo run benchmarks
+
+To run the benchmarks just run the executables with
 
 ```bash
-g++ ../examples/RK-test.cpp -I ../include/ -o RK-test.out
+./benchmark-heyoka
+./benchmark-fehlberg78
+./benchmark-DP5
+./benchmark-bulirsch_stoer
 ```
 
-## HOWTO run
+the data files will appear in benchmark_output in csv format
 
-Following the compilation process, the executables are created in the build folder. If you run CR3BP_euler.out or CR3BP_rk.out, an outputfile is created in the build folder. It contains a timestamp followed by the state in rotating frame (bary-centered).
+## HowTo plot
 
-## HOWTO plot
+There are two files for plotting the results. 
 
-To plot a trajectory use
+### plot_results_file.py
+
+Saves the plots to a file next to the corresponding csv files
+
+run using
 
 ```bash
-cd visualization
-mkdir data
-mv ../build/CR3BP.csv data
-python3 plot_trajectory.py
+cd util
+python3 plot_results_file.py integrator_name
 ```
 
-By default, a projection onto the x-y plane of the trajectory is plotted in the rotating frame. The filename and plotting method can be configured in visualization/plot_trajectory.py
+### plot_results.py
+
+Shows the plots instead of saving them to a file
+run using
+
+```bash
+cd util
+python3 plot_results.py integrator_name
+```
+
+
+## files
+
+### src
+
+The src folder contains benchmark files in ~benchmark/*~ , test-files to ensure the the correctness of the implementation as well as files to propagate an orbit using different integrators.
+
+### Util
+
+The util folder contains files to plot results and a script to calculate the correlation coefficient of two lists. It also contains a data folder with .csv files of reference orbits. Note that some of the scripts were written with AI assistence, since reading matlibplot documentation is not my passion
+
+### include
+
+the include folder contains header files that implement the numerical integrators as well as header files for the mathematical model and files for the benchmarking suite
+
+### benchmark_output
+
+Contains csv and plots of the orbits and their associated errors

@@ -3,23 +3,26 @@
 #include <cmath>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/unsupported/Eigen/AutoDiff>
-#include "model/CR3BP.h" // Assuming your provided CR3BP header is here
+#include "model/CR3BP.h"
 
 namespace cr3bp_benchmarks {
 using state_type = std::array<double, 6>;
 using Vector6d = Eigen::Matrix<double, 6, 1>;
 
-// Helper to convert std::array to Eigen and back
+// Helper methods to convert std::array to Eigen and back
 inline Vector6d to_eigen(const state_type& s) { return Eigen::Map<const Vector6d>(s.data()); }
 inline void to_array(const Vector6d& v, state_type& s) { Eigen::Map<Vector6d>(s.data()) = v; }
 
+// Matrix exponential using Eigen's ComplexEigenSolver
+// I have used a textbook from my first semester as a reference I am guessing that this approach can be found in any linear algebra book
 template <typename SCALAR_TYPE>
 Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic> matrixExp(const Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic>& A, double t)
 {
     Eigen::ComplexEigenSolver<Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic>> ces(A);
     Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic> V = ces.eigenvectors();
     Eigen::Matrix<SCALAR_TYPE, Eigen::Dynamic, Eigen::Dynamic> D = ces.eigenvalues().asDiagonal();
-    // Exponentiate eigenvalues
+
+    // Exponentiate eigenvalues 
     for (int i = 0; i < D.rows(); i++)
         D(i,i) = exp(D(i,i) * t);
 
@@ -50,8 +53,8 @@ Eigen::Matrix<double,6,6> calculate_linearized_A(const Vector6d& state, double m
     return A;
 }
 
+// Compute L1 position using Newton's method
 double compute_L1(double mu) {
-    // Kept simplified: L1 is where derivative = 0 on the x-axis (y=z=dx=dy=dz=0)
     double x = 1.0 - std::cbrt(mu / 3.0);
     for (int i = 0; i < 10; ++i) {
         Vector6d s = Vector6d::Zero();
@@ -66,6 +69,7 @@ double compute_L1(double mu) {
     return x;
 }
 
+// Surrogate L1 dynamics ODE to use for numeric integration
 void surrogate_L1_ode(const state_type& q, state_type& dq, double) {
     const double mu = INTEGRATOR_PARAMETERS::mu;
     static double xL = compute_L1(mu);
@@ -75,11 +79,9 @@ void surrogate_L1_ode(const state_type& q, state_type& dq, double) {
     to_array(res, dq);
 }
 
-// Surrogate exact solution remains largely the same logic-wise
+// Generate exact surrogate L1 trajectory for benchmarking as a reference trajectory
 std::vector<std::pair<double, state_type>>
 surrogate_L1_exact(const state_type& x0, double mu, double tf, double dt) {
-    // Constants lambda/omega/nu derived from the A matrix eigenvalues at L1
-    // For a benchmark, these are usually pre-calculated or extracted from A.
     const double lambda = 0.5; // Example value
     const double omega = 1.0;
     const double nu = 0.8;

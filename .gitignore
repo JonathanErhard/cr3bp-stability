@@ -6,3 +6,4 @@ build/*
 test_data/*
 visualization/plot_orbit.py
 visualization/plot.py
+benchmark_output/*

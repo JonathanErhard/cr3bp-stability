@@ -2,6 +2,21 @@
 #include <benchmark/utility.h>
 
 namespace cr3bp_benchmarks{
+  
+/**
+ *  @tparam System system type
+ *  @tparam Integrator integrator type
+ *  @param system the system to integrate
+ *  @param integrator_ the integrator to use
+ *  @param x0 initial state
+ *  @param t0 initial time
+ *  @param tf final time
+ *  @param dt timestep
+ *  @return pair of trajectories: first is forward, second is backward
+ * 
+ */
+
+
 template <typename System, typename Integrator>
 std::pair<std::vector<std::pair<double,state_type>>,std::vector<std::pair<double,state_type>>> roundtrip_closure_benchmark(
     System system,

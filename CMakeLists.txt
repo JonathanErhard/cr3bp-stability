@@ -27,14 +27,14 @@ set(heyoka_link_TARGETS
 foreach(tgt IN LISTS heyoka_link_TARGETS)
     target_link_libraries(${tgt} PRIVATE
         heyoka::heyoka
-        /home/jojo/local/lib/libssl.so.3
-        /home/jojo/local/lib/libcrypto.so.3
-        /home/jojo/.local/lib/libboost_serialization.so.1.85.0
-        /home/jojo/.local/lib/libboost_charconv.so.1.85.0
-        /home/jojo/.local/lib/libboost_regex.so.1.85.0
-        /home/jojo/local/lib/libfmt.so.12
-        /home/jojo/local/lib/libspdlog.so.1.16
-        /home/jojo/local/lib/libtbb.so.12
+        $ENV{HOME}/local/lib/libssl.so.3
+        $ENV{HOME}/local/lib/libcrypto.so.3
+        $ENV{HOME}/.local/lib/libboost_serialization.so.1.85.0
+        $ENV{HOME}/.local/lib/libboost_charconv.so.1.85.0
+        $ENV{HOME}/.local/lib/libboost_regex.so.1.85.0
+        $ENV{HOME}/local/lib/libfmt.so.12
+        $ENV{HOME}/local/lib/libspdlog.so.1.16
+        $ENV{HOME}/local/lib/libtbb.so.12
     )
 endforeach()
 

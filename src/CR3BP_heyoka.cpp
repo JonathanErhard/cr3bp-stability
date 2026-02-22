@@ -41,7 +41,6 @@ int main()
     for (double tm = 0; tm<tf; tm+=GRIDSIZE) {
 
         (*output)(tm);
-        // Print it out:
         std::cout << tm << ", "
         << output->get_output()[0] << ", "
         << output->get_output()[1] << ", " 
